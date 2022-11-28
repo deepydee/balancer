@@ -1,16 +1,21 @@
-version: '3'
+version: '3.3'
 
 networks:
   default:
-    name: dev-proxy
+    external:
+      name: dev-proxy
+  nginx-proxy:
     external: true
+
+volumes:
+  portainer:
 
 services:
   dnsmasq:
     image: tschaffter/dnsmasq:2.85
     container_name: dnsmasq
     volumes:
-      - ./dnsmasq.conf:/etc/dnsmasq.conf:ro
+      - ./dnsmasq.d/dnsmasq.conf:/etc/dnsmasq.conf:ro
       - ./dnsmasq.d/example.com.conf:/etc/dnsmasq.d/example.com.conf:ro
     command: ["dnsmasq", "-k", "--server", "1.1.1.1", "--server", "1.0.0.1"]
     ports:
@@ -31,7 +36,7 @@ services:
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ./portainer_data:/data
+      - portainer:/data
 
   traefik:
     image: traefik:v2.8.7
@@ -54,3 +59,37 @@ services:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.rule=Host(`traefik.localdev`)"
       - "traefik.http.routers.traefik.service=api@internal"
+
+  nginx:
+    image: nginx
+#    labels:
+#      com.github.jrcs.letsencrypt_nginx_proxy_companion.nginx_proxy: "true"
+    container_name: NGINX
+    restart: unless-stopped
+    networks:
+      - default
+      - nginx-proxy
+    volumes:
+      - ./nginx.d/conf.d:/etc/nginx/conf.d
+      - ./nginx.d/vhost.d:/etc/nginx/vhost.d
+      - ./nginx.d/htpasswd:/etc/nginx/htpasswd
+      - ./nginx.d/html:/usr/share/nginx/html
+      - ./nginx.d/certs:/etc/nginx/certs:ro
+      - ./nginx.d/nginx.conf:/etc/nginx/nginx.conf
+
+  nginx-gen:
+    image: jwilder/docker-gen
+    command: -notify-sighup nginx -watch -wait 5s:30s /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
+    container_name: NGINX-gen
+    restart: unless-stopped
+    networks:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx.d/conf.d:/etc/nginx/conf.d
+      - ./nginx.d/vhost.d:/etc/nginx/vhost.d
+      - ./nginx.d/htpasswd:/etc/nginx/htpasswd
+      - ./nginx.d/html:/usr/share/nginx/html
+      - ./nginx.d/certs:/etc/nginx/certs:ro
+      - ./nginx.d/nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro
+      
