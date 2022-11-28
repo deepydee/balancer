@@ -1,3 +1,6 @@
-certs/
-conf.d/
-portainer_data/
+/.env
+nginx.d/certs/*
+nginx.d/conf.d/*
+nginx.d/html/*
+nginx.d/htpasswd
+nginx.d/vhost.d
