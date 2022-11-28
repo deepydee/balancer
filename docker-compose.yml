@@ -13,7 +13,7 @@ volumes:
 services:
   dnsmasq:
     image: tschaffter/dnsmasq:2.85
-    container_name: dnsmasq
+    container_name: DNSMASQ
     volumes:
       - ./dnsmasq.d/dnsmasq.conf:/etc/dnsmasq.conf:ro
       - ./dnsmasq.d/example.com.conf:/etc/dnsmasq.d/example.com.conf:ro
@@ -42,8 +42,6 @@ services:
     image: traefik:v2.8.7
     container_name: TRAEFIK
     restart: always
-    environment:
-      VIRTUAL_HOST: ${VIRTUAL_HOST}
     command:
       - "--api.insecure=true"
       - "--accesslog=true"
@@ -63,7 +61,7 @@ services:
   nginx:
     image: nginx
     container_name: NGINX
-    restart: unless-stopped
+    restart: always
     networks:
       - default
       - nginx-proxy
@@ -82,8 +80,8 @@ services:
   nginx-gen:
     image: jwilder/docker-gen
     command: -notify-sighup nginx -watch -wait 5s:30s /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
-    container_name: NGINX-gen
-    restart: unless-stopped
+    container_name: NGINX-GEN
+    restart: always
     networks:
       - nginx-proxy
     volumes:
