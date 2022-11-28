@@ -1,4 +1,16 @@
 # DNSmasq + Traefik + Portainer + Nginx
+
+## Перед установкой
+Необходимо удалить все старые контейнеры nginx и traefik
+```sh
+cd ./nginx
+docker-compose down
+```
+```sh
+cd ./traefik
+docker-compose down
+```
+
 ## Порядок запуска локального балансировщика
 
 ```sh
