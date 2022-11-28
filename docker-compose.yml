@@ -1,23 +1,33 @@
 version: '3'
 
 networks:
-  dev-proxy:
+  default:
+    name: dev-proxy
     external: true
 
 services:
+  dnsmasq:
+    image: tschaffter/dnsmasq:2.85
+    container_name: dnsmasq
+    volumes:
+      - ./dnsmasq.conf:/etc/dnsmasq.conf:ro
+      - ./dnsmasq.d/example.com.conf:/etc/dnsmasq.d/example.com.conf:ro
+    command: ["dnsmasq", "-k", "--server", "1.1.1.1", "--server", "1.0.0.1"]
+    ports:
+     - "53:53/udp"
+    restart: always
+
   portainer:
     image: portainer/portainer-ce
     container_name: PORTAINER
     command: -H unix:///var/run/docker.sock
     restart: always
-    networks:
-      - dev-proxy
     expose:
       - 9000
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=dev-proxy"
-      - "traefik.http.routers.portainer.rule=Host(`portainer.test`)"
+      - "traefik.http.routers.portainer.rule=Host(`portainer.localdev`)"
       - "traefik.http.services.portainer.loadbalancer.server.port=9000"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -27,8 +37,8 @@ services:
     image: traefik:v2.8.7
     container_name: TRAEFIK
     restart: always
-#    environment:
-#      VIRTUAL_HOST: ${VIRTUAL_HOST}
+    environment:
+      VIRTUAL_HOST: ${VIRTUAL_HOST}
     command:
       - "--api.insecure=true"
       - "--accesslog=true"
@@ -38,12 +48,9 @@ services:
       - "--entrypoints.web.address=:80"
     ports:
       - 80:80
-#      - 8080:8080
-    networks:
-      - dev-proxy
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.test`)"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.localdev`)"
       - "traefik.http.routers.traefik.service=api@internal"
