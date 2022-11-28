@@ -11,16 +11,16 @@ volumes:
   portainer:
 
 services:
-  dnsmasq:
-    image: tschaffter/dnsmasq:2.85
-    container_name: DNSMASQ
-    volumes:
-      - ./dnsmasq.d/dnsmasq.conf:/etc/dnsmasq.conf:ro
-      - ./dnsmasq.d/test.conf:/etc/dnsmasq.d/test.conf:ro
-    command: ["dnsmasq", "-k", "--server", "1.1.1.1", "--server", "1.0.0.1"]
-    ports:
-     - "53:53/udp"
-    restart: always
+#  dnsmasq:
+#    image: tschaffter/dnsmasq:2.85
+#    container_name: DNSMASQ
+#    volumes:
+#      - ./dnsmasq.d/dnsmasq.conf:/etc/dnsmasq.conf:ro
+#      - ./dnsmasq.d/test.conf:/etc/dnsmasq.d/test.conf:ro
+#    command: ["dnsmasq", "-k", "--server", "1.1.1.1", "--server", "1.0.0.1"]
+#    ports:
+#     - "53:53/udp"
+#    restart: always
 
   portainer:
     image: portainer/portainer-ce:2.16.2
