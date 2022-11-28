@@ -15,14 +15,8 @@ docker-compose down
 
 ```sh
 docker-compose pull
-sudo systemctl disable systemd-resolved
-sudo systemctl stop systemd-resolved
 docker-compose up -d
 ```
-
-## Особенности
-
-В текущей сборке не нужно править .env файл, и файл /etc/hosts, теперь сборка отслеживает любые локальные домены если они заканчиваются на .test
 
 ## Проекты с nginx-proxy
 
