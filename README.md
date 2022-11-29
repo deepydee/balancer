@@ -1,4 +1,4 @@
-# DNSmasq + Traefik + Portainer + Nginx
+# Traefik + Portainer + Nginx
 
 ## Перед установкой
 Необходимо удалить все старые контейнеры nginx и traefik
