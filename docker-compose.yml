@@ -21,8 +21,10 @@ services:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --entrypoints.web.address=:80
+      - --entrypoints.smtp.address=:1025
     ports:
       - 80:80
+      - 1025:1025
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
@@ -89,10 +91,9 @@ services:
   mailpit:
     image: axllent/mailpit
     container_name: MAILPIT
-    ports:
-      - 1025:1025
     expose:
       - 8025
+      - 1025
     labels:
       - traefik.enable=true
       - traefik.docker.network=dev-proxy
@@ -100,6 +101,10 @@ services:
       - traefik.http.services.mailpit.loadbalancer.server.port=8025
       - traefik.http.routers.mailpit.middlewares=traefik-compress
       - traefik.http.middlewares.traefik-compress.compress=true
+      - traefik.tcp.routers.mailpit.rule=HostSNI(`*`)
+      - traefik.tcp.routers.mailpit.entrypoints=smtp
+      - traefik.tcp.routers.mailpit.service=mailpit-svc
+      - traefik.tcp.services.mailpit-svc.loadbalancer.server.port=1025
     volumes:
       - mp-data:/data
     restart: always
