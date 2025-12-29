@@ -1,19 +1,6 @@
-version: '3.3'
-
-networks:
-  default:
-    name: dev-proxy
-    external: true
-  nginx-proxy:
-    external: true
-
-volumes:
-  portainer:
-  mp-data:
-
 services:
   traefik:
-    image: traefik:v2.10
+    image: traefik:latest
     container_name: TRAEFIK
     command:
       - --api.insecure=true
@@ -36,7 +23,7 @@ services:
     restart: always
 
   portainer:
-    image: portainer/portainer-ce:alpine
+    image: portainer/portainer-ce:latest
     container_name: PORTAINER
     command: -H unix:///var/run/docker.sock
     expose:
@@ -53,40 +40,95 @@ services:
       - portainer:/data
     restart: always
 
-  nginx:
-    image: nginx:stable-alpine
-    container_name: NGINX
-    networks:
-      - default
-      - nginx-proxy
-    volumes:
-      - ./nginx.d/conf.d:/etc/nginx/conf.d
-      - ./nginx.d/vhost.d:/etc/nginx/vhost.d
-      - ./nginx.d/htpasswd:/etc/nginx/htpasswd
-      - ./nginx.d/html:/usr/share/nginx/html
-      - ./nginx.d/certs:/etc/nginx/certs:ro
-      - ./nginx.d/nginx.conf:/etc/nginx/nginx.conf
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=dev-proxy
-      - traefik.http.routers.nginx.rule=Host(`sg.test`) || Host(`pma.sg.test`)
-    restart: always
+#  amqproxy:
+#    image: cloudamqp/amqproxy:latest
+#    environment:
+#      - AMQP_URL=amqp://rmuser:rmpassword@rabbitmq
+#    depends_on:
+#      - rabbitmq
 
-  nginx-gen:
-    image: jwilder/docker-gen
-    command: -notify-sighup nginx -watch -wait 5s:30s /etc/docker-gen/templates/nginx.tmpl /etc/nginx/conf.d/default.conf
-    container_name: NGINX-GEN
-    networks:
-      - nginx-proxy
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: RABBITMQ
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: rmuser
+      RABBITMQ_DEFAULT_PASS: rmpassword
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit disk_free_limit 2147483647"
+    expose:
+      - 15672
+    labels:
+        - traefik.enable=true
+        - traefik.docker.network=dev-proxy
+        - traefik.http.routers.rabbitmq.rule=Host(`rabbitmq.test`)
+        - traefik.http.services.rabbitmq.loadbalancer.server.port=15672
     volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx.d/conf.d:/etc/nginx/conf.d
-      - ./nginx.d/vhost.d:/etc/nginx/vhost.d
-      - ./nginx.d/htpasswd:/etc/nginx/htpasswd
-      - ./nginx.d/html:/usr/share/nginx/html
-      - ./nginx.d/certs:/etc/nginx/certs:ro
-      - ./nginx.d/nginx.tmpl:/etc/docker-gen/templates/nginx.tmpl:ro
-    restart: always
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+
+
+#  kafka:
+#    image: confluentinc/cp-kafka:7.5.3
+#    ports:
+#      - "9092:9092"
+#      - "29092:29092"
+#    environment:
+#      CLUSTER_ID: owTqM56cRl6JiQpbQSQSfQ
+#
+#      KAFKA_OPTS: "-Djava.security.auth.login.config=/etc/kafka/kafka_server_jaas.conf"
+#
+#      KAFKA_PROCESS_ROLES: broker,controller
+#      KAFKA_NODE_ID: 1
+#      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+#
+#      KAFKA_LISTENERS: SASL_PLAINTEXT://0.0.0.0:9092,SASL_PLAINTEXT_HOST://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093
+#      KAFKA_ADVERTISED_LISTENERS: SASL_PLAINTEXT://kafka:9092,SASL_PLAINTEXT_HOST://localhost:29092
+#
+#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: SASL_PLAINTEXT:SASL_PLAINTEXT,SASL_PLAINTEXT_HOST:SASL_PLAINTEXT,CONTROLLER:PLAINTEXT
+#      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+#      KAFKA_INTER_BROKER_LISTENER_NAME: SASL_PLAINTEXT
+#
+#      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+#      KAFKA_SASL_MECHANISM_INTER_BROKER_PROTOCOL: PLAIN
+#      KAFKA_LISTENER_NAME_SASL_PLAINTEXT_SASL_ENABLED_MECHANISMS: PLAIN
+#      KAFKA_LISTENER_NAME_SASL_PLAINTEXT_HOST_SASL_ENABLED_MECHANISMS: PLAIN
+#      KAFKA_SASL_JAAS_CONFIG: >-
+#        org.apache.kafka.common.security.plain.PlainLoginModule required
+#        username="${KAFKA_USERNAME:-lanister}" password="${KAFKA_PASSWORD:-password}" user_${KAFKA_USERNAME:-lanister}="${KAFKA_PASSWORD:-password}";
+#      KAFKA_LISTENER_NAME_SASL_PLAINTEXT_PLAIN_SASL_JAAS_CONFIG: >-
+#        org.apache.kafka.common.security.plain.PlainLoginModule required
+#        username="${KAFKA_USERNAME:-lanister}" password="${KAFKA_PASSWORD:-password}" user_${KAFKA_USERNAME:-lanister}="${KAFKA_PASSWORD:-password}";
+#      KAFKA_LISTENER_NAME_SASL_PLAINTEXT_HOST_PLAIN_SASL_JAAS_CONFIG: >-
+#        org.apache.kafka.common.security.plain.PlainLoginModule required
+#        username="${KAFKA_USERNAME:-lanister}" password="${KAFKA_PASSWORD:-password}" user_${KAFKA_USERNAME:-lanister}="${KAFKA_PASSWORD:-password}";
+#
+#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+#      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+#      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+#
+#    volumes:
+#      - kafka-data:/var/lib/kafka/data
+#      - ./kafka/kafka_server_jaas.conf:/etc/kafka/kafka_server_jaas.conf:ro
+#
+#    networks:
+#      - default
+#
+#  kafka-ui:
+#    image: provectuslabs/kafka-ui:latest
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      KAFKA_CLUSTERS_0_NAME: local
+#      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+#      KAFKA_CLUSTERS_0_PROPERTIES_SECURITY_PROTOCOL: SASL_PLAINTEXT
+#      KAFKA_CLUSTERS_0_PROPERTIES_SASL_MECHANISM: PLAIN
+#      KAFKA_CLUSTERS_0_PROPERTIES_SASL_JAAS_CONFIG: >-
+#        org.apache.kafka.common.security.plain.PlainLoginModule required
+#        username="${KAFKA_USERNAME:-lanister}" password="${KAFKA_PASSWORD:-password}";
+#    depends_on:
+#      - kafka
+#    networks:
+#      - default
 
   mailpit:
     image: axllent/mailpit
@@ -108,3 +150,16 @@ services:
     volumes:
       - mp-data:/data
     restart: always
+
+networks:
+  default:
+    name: dev-proxy
+    external: true
+  nginx-proxy:
+    external: true
+
+volumes:
+  portainer:
+  mp-data:
+  rabbitmq_data:
+  kafka-data:
